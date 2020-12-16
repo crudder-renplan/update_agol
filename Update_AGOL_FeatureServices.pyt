@@ -12,6 +12,10 @@ sys.dont_write_bytecode = True
 
 from UpdateAGOL import UpdateAGOL
 
+# if 'UpdateAGOL' in sys.modules:
+#     import importlib
+#     importlib.reload(UpdateAGOL)
+
 
 class Toolbox(object):
     def __init__(self):
