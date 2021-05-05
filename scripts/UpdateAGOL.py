@@ -129,25 +129,14 @@ class UpdateAGOL(object):
             if parameters[0].value and parameters[1].value and parameters[2].value:
                 user_list = []
                 arcpy.AddMessage(parameters[0])
-                portal = GIS(
-                    url=parameters[0].value,
-                    username=parameters[1].value,
-                    password=parameters[2].value,
-                )
-                portal_users = portal.users.search(
-                    "!esri_ & !system_publisher", max_users=10000
-                )
+                portal = GIS(url=parameters[0].value, username=parameters[1].value, password=parameters[2].value,)
+                portal_users = portal.users.search("!esri_ & !system_publisher", max_users=10000)
                 for user in portal_users:
                     user_list.append(user.username)
                 user_filter = parameters[3].filter
                 user_filter.list = user_list
         # Dropdown for content associated with chosen user
-        if (
-            parameters[0].value
-            and parameters[1].value
-            and parameters[2].value
-            and parameters[3].value
-        ):
+        if (parameters[0].value and parameters[1].value and parameters[2].value and parameters[3].value):
             content_list = []
             group_list = []
             for user in portal_users:
@@ -192,21 +181,36 @@ class UpdateAGOL(object):
         """The source code of the tool."""
         arcpy.env.overwriteOutput = True
         """ variables given"""
-        portal_url = parameters[0].valueAsText
-        admin_user = parameters[1].valueAsText
-        admin_pass = parameters[2].valueAsText
-        content_owner = parameters[3].valueAsText
-        service_name = parameters[4].valueAsText
-        group_names = parameters[5].valueAsText.split(";")
-        pro_project = parameters[6].valueAsText
-        map_name = parameters[7].valueAsText
-        share_to_org = parameters[8].valueAsText
-        share_to_everyone = parameters[9].valueAsText
+        # portal_url = parameters[0].valueAsText
+        # admin_user = parameters[1].valueAsText
+        # admin_pass = parameters[2].valueAsText
+        # content_owner = parameters[3].valueAsText
+        # service_name = parameters[4].valueAsText
+        # group_names = parameters[5].valueAsText
+        # pro_project = parameters[6].valueAsText
+        # map_name = parameters[7].valueAsText
+        # share_to_org = parameters[8].valueAsText
+        # share_to_everyone = parameters[9].valueAsText
+
+        portal_url = parameters[0]
+        admin_user = parameters[1]
+        admin_pass = parameters[2]
+        content_owner = parameters[3]
+        service_name = parameters[4]
+        group_names = parameters[5]
+        pro_project = parameters[6]
+        map_name = parameters[7]
+        share_to_org = parameters[8]
+        share_to_everyone = parameters[9]
+        if group_names == "":
+            group_names = []
+        else:
+            group_names = group_names.split(";")
 
         """ date and time variable """
         now = datetime.now()
         time_string = datetime.strftime(now, '%Y-%d-%m_%I%M')
-        
+
         """ main work """
         # with tempfile.TemporaryDirectory() as LOCAL_PATH:
         LOCAL_PATH = os.path.dirname(pro_project)
@@ -214,13 +218,8 @@ class UpdateAGOL(object):
         SD_path = os.path.join(LOCAL_PATH, f"{time_string}_WebUpdate.sd")
 
         arcpy.AddMessage("...Creating Service Definition from map layers...")
-        stage_features(
-            project=pro_project,
-            prj_map=map_name,
-            service=service_name,
-            draft=draft_path,
-            definition=SD_path,
-        )
+        stage_features(project=pro_project, prj_map=map_name, service=service_name,
+                       draft=draft_path, definition=SD_path, )
 
         arcpy.AddMessage(f"...Connecting to {portal_url}")
         gis = GIS(url=portal_url, username=admin_user, password=admin_pass)
@@ -231,18 +230,16 @@ class UpdateAGOL(object):
         # check to see if the service exists and overwrite, otherwise publish new service
         try:
             arcpy.AddMessage("Looking for original service definition on portal...")
-            service_def_item = gis.content.search(
-                query=f"title:{service_name} AND owner:{content_owner}",
-                item_type="Service Definition",
-            )[0]
+            service_def_item = gis.content.search(query=f"title:{service_name} AND owner:{content_owner}",
+                                                  item_type="Service Definition", )[0]
             arcpy.AddMessage(
                 f"\tFound SD: {service_def_item.title}, \n\tID: {service_def_item.id} \n\t\tUploading and overwriting…"
             )
             service_def_item.update(data=str(SD_path))
+            arcpy.AddMessage(service_def_item)
             arcpy.AddMessage("\tOverwriting existing feature service…")
-            feature_service = service_def_item.publish(
-                overwrite=True
-            )  # TODO: getting error here, not overwriting and then failing in except as this itme exists
+            feature_service = service_def_item.publish(overwrite=True)
+            # TODO: getting error here, not overwriting and then failing in except as this item exists
         except:
             arcpy.AddMessage("The service doesn't exist, creating new")
             arcpy.AddMessage("...uploading new content")
@@ -253,11 +250,8 @@ class UpdateAGOL(object):
         # share updated/new feature service
         if share_to_org or share_to_everyone or share_with_groups:
             arcpy.AddMessage(f"Setting sharing settings")
-            feature_service.share(
-                org=share_to_org,
-                everyone=share_to_everyone,
-                groups=share_with_groups,
-            )
+            feature_service.share(org=share_to_org, everyone=share_to_everyone,
+                                  groups=share_with_groups, )
         return
 
 
@@ -265,21 +259,11 @@ def stage_features(project, prj_map, service, draft, definition):
     prj = arcpy.mp.ArcGISProject(project)
     for m in prj.listMaps():
         if m.name == prj_map:
-            arcpy.mp.CreateWebLayerSDDraft(
-                map_or_layers=m,
-                out_sddraft=draft,
-                service_name=service,
-                server_type="HOSTING_SERVER",
-                service_type="FEATURE_ACCESS",
-                folder_name="",
-                overwrite_existing_service=True,
-                copy_data_to_server=True,
-                enable_editing=True,
-            )
-            arcpy.StageService_server(
-                in_service_definition_draft=draft,
-                out_service_definition=definition,
-            )
+            arcpy.mp.CreateWebLayerSDDraft(map_or_layers=m, out_sddraft=draft, service_name=service,
+                                           server_type="HOSTING_SERVER", service_type="FEATURE_ACCESS",
+                                           folder_name="", overwrite_existing_service=True,
+                                           copy_data_to_server=True, enable_editing=True, )
+            arcpy.StageService_server(in_service_definition_draft=draft, out_service_definition=definition,)
 
 
 def get_group_id(group_name, owner, gis):
@@ -302,14 +286,29 @@ def get_wm_item_id(gis, wm_title, item_type="Web Map"):
 
 if __name__ == "__main__":
     arcpy.env.overwriteOutput = True
-    """ variables given"""
-    portal_url = parameters[0].valueAsText
-    admin_user = parameters[1].valueAsText
-    admin_pass = parameters[2].valueAsText
-    content_owner = parameters[3].valueAsText
-    service_name = parameters[4].valueAsText
-    group_names = parameters[5].valueAsText.split(";")
-    pro_project = parameters[6].valueAsText
-    map_name = parameters[7].valueAsText
-    share_to_org = parameters[8].valueAsText
-    share_to_everyone = parameters[9].valueAsText
+    # """ variables given"""
+    # portal_url = parameters[0].valueAsText
+    # admin_user = parameters[1].valueAsText
+    # admin_pass = parameters[2].valueAsText
+    # content_owner = parameters[3].valueAsText
+    # service_name = parameters[4].valueAsText
+    # group_names = parameters[5].valueAsText.split(";")
+    # pro_project = parameters[6].valueAsText
+    # map_name = parameters[7].valueAsText
+    # share_to_org = parameters[8].valueAsText
+    # share_to_everyone = parameters[9].valueAsText
+
+    portal_url = "https://arcgis.com"
+    admin_user = "Developer_CTW"
+    admin_pass = "RenPlanD3v"
+    content_owner = "Developer_CTW"
+    service_name = "Change in Jobs_Housing Balance by Block_tileTest"
+    group_names = ""
+    pro_project = r"C:\OneDrive_RP\OneDrive - Renaissance Planning Group\SHARE\PMT\PMT.aprx"
+    map_name = "Trend Tile Services"
+    share_to_org = False
+    share_to_everyone = False
+    parameters = [portal_url, admin_user, admin_pass, content_owner, service_name,
+                  group_names, pro_project, map_name, share_to_org, share_to_everyone]
+    tool = UpdateAGOL()
+    tool.execute(parameters=parameters, messages="")

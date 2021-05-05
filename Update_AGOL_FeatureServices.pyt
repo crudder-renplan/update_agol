@@ -10,7 +10,7 @@ sys.path.append(scripts_dir)
 # Do not compile .pyc files for the tool modules.
 sys.dont_write_bytecode = True
 
-from UpdateAGOL import UpdateAGOL
+from scripts.UpdateAGOL import UpdateAGOL
 
 # if 'UpdateAGOL' in sys.modules:
 #     import importlib
